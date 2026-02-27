@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <% if (bannerMessage) { %><div class="banner"><%= bannerMessage %></div><% } %>
+  <h1>Placement Requests Dashboard</h1>
+  <p>Sort: <a href="?sortBy=employee">Employee</a> | <a href="?sortBy=submitted">Date Submitted</a> | <a href="?sortBy=cert">Certification ID</a> | <a href="?sortBy=status">Status</a></p>
+  <% Object.entries(grouped).forEach(([school, items]) => { %>
+    <details open>
+      <summary><strong><%= school %></strong> (<%= items.length %>)</summary>
+      <table>
+        <thead><tr><th>Employee</th><th>Submitted</th><th>Certification</th><th>Preferred Locations</th><th>Status</th><th>Current Position/Principal</th><th>Actions</th></tr></thead>
+        <tbody>
+        <% items.forEach((row) => { %>
+          <tr>
+            <td><%= row.displayName %></td>
+            <td><%= row.dateSubmitted ? new Date(row.dateSubmitted).toLocaleDateString() : '' %></td>
+            <td><%= row.certificationID %></td>
+            <td><%= row.preferredLocations || '' %></td>
+            <td><%= row.formStatus %></td>
+            <td><%= row.curPositionType %> / <%= row.principal || '' %></td>
+            <td>
+              <form method="post" action="/admin/applications/<%= row.id %>/status">
+                <select name="status">
+                  <% ['Submitted', 'Interview Requested', 'Not Available', 'Closed'].forEach((status) => { %>
+                    <option value="<%= status %>" <%= row.formStatus === status ? 'selected' : '' %>><%= status %></option>
+                  <% }) %>
+                </select>
+                <button>Update</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table>
+    </details>
+  <% }) %>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Placement Request</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <% if (bannerMessage) { %><div class="banner"><%= bannerMessage %></div><% } %>
+  <h1>GCPS Placement Preference Form</h1>
+  <% if (!user) { %><p>User profile not found.</p><% } %>
+  <% if (errors.length) { %>
+    <ul class="errors"><% errors.forEach(function(e){ %><li><%= e %></li><% }) %></ul>
+  <% } %>
+  <form method="post">
+    <fieldset>
+      <legend>Employee Information</legend>
+      <p>Name: <strong><%= user?.displayName || '' %></strong></p>
+      <p>Employee ID: <strong><%= user?.userId || '' %></strong></p>
+      <p>Current School: <strong><%= user?.currentSchoolName || '' %></strong></p>
+      <p>Current Job Title: <strong><%= user?.currentJobName || '' %></strong></p>
+      <p>Principal: <strong><%= user?.principal || '' %></strong></p>
+    </fieldset>
+
+    <label>Current position type*
+      <select name="curPositionType" <%= isReadOnly ? 'disabled' : '' %> required>
+        <option value="">--Select--</option>
+        <option value="Teacher" <%= application?.curPositionType === 'Teacher' ? 'selected' : '' %>>Teacher</option>
+        <option value="Assistant Principal" <%= application?.curPositionType === 'Assistant Principal' ? 'selected' : '' %>>Assistant Principal</option>
+      </select>
+    </label>
+
+    <label>Reason for transfer*
+      <select name="reasonForRequest" <%= isReadOnly ? 'disabled' : '' %> required>
+        <option value="">--Select--</option>
+        <option value="Growth Opportunity" <%= application?.reasonForRequest === 'Growth Opportunity' ? 'selected' : '' %>>Growth Opportunity</option>
+        <option value="Commute" <%= application?.reasonForRequest === 'Commute' ? 'selected' : '' %>>Commute</option>
+        <option value="Other" <%= application?.reasonForRequest === 'Other' ? 'selected' : '' %>>Other</option>
+      </select>
+    </label>
+
+    <div class="grid">
+      <% ['yearsOfTeaching', 'yearsOfAdmin', 'yearsOfCertificated', 'yearsTotalGCPS', 'yearsTotalExpNonGCPS'].forEach(function(field){ %>
+      <label><%= field %>*
+        <input type="number" min="0" name="<%= field %>" value="<%= application?.[field] ?? '' %>" <%= isReadOnly ? 'readonly' : '' %> required />
+      </label>
+      <% }) %>
+    </div>
+
+    <fieldset>
+      <legend>Verifications*</legend>
+      <label><input type="checkbox" name="verifyPDP" <%= application?.verifyPDP ? 'checked' : '' %> <%= isReadOnly ? 'disabled' : '' %> required /> I am not on PDP</label>
+      <label><input type="checkbox" name="verifyCertificate" <%= application?.verifyCertificate ? 'checked' : '' %> <%= isReadOnly ? 'disabled' : '' %> required /> I hold a renewable professional certificate</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Preferred School Locations*</legend>
+      <% const categories = ['Elementary', 'Middle', 'High', 'Other']; %>
+      <% categories.forEach(function(cat){ const filtered = schools.filter(s => s.category === cat); if (!filtered.length) return; %>
+        <h3><%= cat %> <button class="inline" type="button" onclick="selectAll('<%= cat %>')">Select all</button></h3>
+        <% filtered.forEach(function(s){ %>
+          <label><input class="school-<%= cat %>" type="checkbox" name="preferredLocations" value="<%= s.loc %>" <%= selectedLocations.includes(s.loc) ? 'checked' : '' %> <%= isReadOnly ? 'disabled' : '' %> /> <%= s.locname %></label>
+        <% }) %>
+      <% }) %>
+    </fieldset>
+
+    <fieldset>
+      <legend>Preferred Assignments (1-3)*</legend>
+      <% for (let i = 1; i <= 3; i++) { %>
+        <label>Assignment <%= i %>
+          <select name="prefTeachingAssignment<%= i %>" <%= isReadOnly ? 'disabled' : '' %>>
+            <option value="">--Select--</option>
+            <% jobs.forEach(function(job){ %>
+              <option value="<%= job.id %>" <%= String(application?.['prefTeachingAssignment'+i] || '') === String(job.id) ? 'selected' : '' %>><%= job.jobName %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label>Additional info <%= i %>
+          <textarea name="additionalInfo<%= i %>" <%= isReadOnly ? 'readonly' : '' %>><%= application?.['additionalInfo'+i] || '' %></textarea>
+        </label>
+      <% } %>
+    </fieldset>
+
+    <label>Certification ID* <input name="certificationID" value="<%= application?.certificationID || '' %>" required <%= isReadOnly ? 'readonly' : '' %> /></label>
+    <label>Field(s) of Certification* <textarea name="fieldCertification" required <%= isReadOnly ? 'readonly' : '' %>><%= application?.fieldCertification || '' %></textarea></label>
+    <label>Certificate Level*
+      <select name="certificateLevel" required <%= isReadOnly ? 'disabled' : '' %>>
+        <option value="">--Select--</option>
+        <% certificateLevels.forEach(function(lvl){ %>
+          <option value="<%= lvl %>" <%= application?.certificateLevel === lvl ? 'selected' : '' %>><%= lvl %></option>
+        <% }) %>
+      </select>
+    </label>
+
+    <% if (application) { %><p>Status: <strong><%= application.formStatus %></strong></p><% } %>
+
+    <% if (!isReadOnly) { %><button type="submit">Save / Submit</button><% } %>
+  </form>
+<script>
+function selectAll(category) {
+  document.querySelectorAll('.school-' + category).forEach(function(box){ box.checked = true; });
+}
+</script>
+</body>
+</html>
