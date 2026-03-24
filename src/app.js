@@ -403,16 +403,25 @@ app.get('/admin/applications/:id', async (req, res, next) => {
       return res.status(404).send('Application not found.');
     }
 
+    const selectedSchool = req.query.school ? String(req.query.school) : '';
+    const selectedStatus = req.query.status ? String(req.query.status) : '';
+    const filteredLocationStatuses = context.preferredLocationStatuses.filter((location) => {
+      const schoolMatches = !selectedSchool || location.schoolName === selectedSchool;
+      const statusMatches = !selectedStatus || location.status === selectedStatus;
+      return schoolMatches && statusMatches;
+    });
+
     res.render('request-form', {
       ...context,
+      preferredLocationStatuses: filteredLocationStatuses,
       certificateLevels: CERTIFICATE_LEVELS,
       bannerMessage: process.env.BANNER_MESSAGE || '',
       errors: [],
       isReadOnly: true,
       isAdminView: true,
       selectedSortBy: req.query.sortBy ? String(req.query.sortBy) : 'employee',
-      selectedSchool: req.query.school ? String(req.query.school) : '',
-      selectedStatus: req.query.status ? String(req.query.status) : ''
+      selectedSchool,
+      selectedStatus
     });
   } catch (err) {
     next(err);
@@ -432,7 +441,16 @@ app.post('/admin/applications/:id/status', async (req, res, next) => {
       status: req.body.status
     });
     const returnToDetails = req.body.returnToDetails === 'true';
-    res.redirect(returnToDetails ? `/admin/applications/${Number(req.params.id)}` : '/admin/applications');
+    if (!returnToDetails) {
+      return res.redirect('/admin/applications');
+    }
+
+    const detailQuery = new URLSearchParams();
+    if (req.body.selectedSchool) detailQuery.set('school', String(req.body.selectedSchool));
+    if (req.body.selectedStatus) detailQuery.set('status', String(req.body.selectedStatus));
+    if (req.body.selectedSortBy) detailQuery.set('sortBy', String(req.body.selectedSortBy));
+    const detailPath = `/admin/applications/${Number(req.params.id)}`;
+    res.redirect(detailQuery.toString() ? `${detailPath}?${detailQuery.toString()}` : detailPath);
   } catch (err) {
     next(err);
   }
