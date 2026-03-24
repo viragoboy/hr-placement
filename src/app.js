@@ -69,7 +69,7 @@ function normalizeRowKeys(row, expectedKeys) {
 
 function auth(req, res, next) {
   req.user = {
-    userId: req.header('x-user-id') || req.query.asUser || 'u12345',
+    userId: req.header('x-user-id') || req.query.asUser || 'u10001',
     role: req.header('x-role') || req.query.asRole || 'requester'
   };
   next();
@@ -136,7 +136,7 @@ app.get('/request', async (req, res, next) => {
       certificateLevels: CERTIFICATE_LEVELS,
       bannerMessage: process.env.BANNER_MESSAGE || '',
       errors: [],
-      isReadOnly: Boolean(context.application)
+      isReadOnly: Boolean(context.application) || !context.user
     });
   } catch (err) {
     next(err);
@@ -146,6 +146,16 @@ app.get('/request', async (req, res, next) => {
 app.post('/request', async (req, res, next) => {
   try {
     const context = await getRequesterContext(req.user.userId);
+    if (!context.user) {
+      return res.status(422).render('request-form', {
+        ...context,
+        certificateLevels: CERTIFICATE_LEVELS,
+        errors: ['Your user profile was not found. Please contact an administrator before submitting a request.'],
+        bannerMessage: process.env.BANNER_MESSAGE || '',
+        isReadOnly: true
+      });
+    }
+
     const existing = context.application;
     const isReadOnly = Boolean(existing);
 
