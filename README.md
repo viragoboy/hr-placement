@@ -8,7 +8,14 @@ Node + Express + PostgreSQL web app for GCPS lateral transfer requests.
    ```bash
    npm install
    ```
-2. Configure environment variables:
+2. Create a local env file from the template and edit values:
+   ```bash
+   cp .env.example .env
+   ```
+
+   This project uses `dotenv` (loaded in `src/server.js`) so values from `.env` are available via `process.env`.
+
+   Supported environment variables:
    - `PGHOST` (or `DB_SERVER`)
    - `PGPORT` (or `DB_PORT`, default `5432`)
    - `PGDATABASE` (or `DB_NAME`)
