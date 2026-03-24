@@ -22,8 +22,18 @@
           </div>
           <% if (application) { %>
             <div class="text-md-end">
-              <span class="text-body-secondary">Status</span>
-              <div><span class="badge text-bg-secondary fs-6"><%= application.formStatus %></span></div>
+              <span class="text-body-secondary">School Statuses</span>
+              <div class="d-flex flex-wrap justify-content-md-end gap-1 mt-1">
+                <% if (preferredLocationStatuses?.length) { %>
+                  <% preferredLocationStatuses.forEach((location) => { %>
+                    <span class="badge text-bg-secondary">
+                      <%= location.schoolName || location.schoolLoc %>: <%= location.status || 'Submitted' %>
+                    </span>
+                  <% }) %>
+                <% } else { %>
+                  <span class="badge text-bg-secondary">Submitted</span>
+                <% } %>
+              </div>
             </div>
           <% } %>
         </div>

@@ -56,9 +56,10 @@
                               </div>
                             </div>
                             <form class="d-flex gap-2 align-items-start" method="post" action="/admin/applications/<%= row.id %>/status">
+                              <input type="hidden" name="schoolLoc" value="<%= row.schoolLoc %>">
                               <select name="status" class="form-select form-select-sm">
                                 <% ['Submitted', 'Interview Requested', 'Not Available', 'Closed'].forEach((nextStatus) => { %>
-                                  <option value="<%= nextStatus %>" <%= row.formStatus === nextStatus ? 'selected' : '' %>><%= nextStatus %></option>
+                                  <option value="<%= nextStatus %>" <%= row.locationStatus === nextStatus ? 'selected' : '' %>><%= nextStatus %></option>
                                 <% }) %>
                               </select>
                               <button class="btn btn-primary btn-sm">Update</button>

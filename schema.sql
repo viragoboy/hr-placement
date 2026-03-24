@@ -23,7 +23,6 @@ CREATE TABLE Jobs (
 CREATE TABLE Applications (
     id SERIAL PRIMARY KEY,
     requesterId VARCHAR(50) NOT NULL UNIQUE,
-    formStatus VARCHAR(50) DEFAULT 'Submitted',
     curPositionType VARCHAR(100) NOT NULL,
     reasonForRequest VARCHAR(100) NOT NULL,
     verifyPDP BOOLEAN NOT NULL,
@@ -63,8 +62,10 @@ CREATE TABLE Applications (
 CREATE TABLE ApplicationPreferredLocations (
     applicationId INT NOT NULL,
     schoolLoc VARCHAR(10) NOT NULL,
-    status VARCHAR(50) DEFAULT 'Pending',
+    status VARCHAR(50) NOT NULL DEFAULT 'Submitted',
     PRIMARY KEY (applicationId, schoolLoc),
+    CONSTRAINT chk_application_preferred_locations_status
+        CHECK (status IN ('Submitted', 'Interview Requested', 'Not Available', 'Closed')),
     FOREIGN KEY (applicationId) REFERENCES Applications(id) ON DELETE CASCADE,
     FOREIGN KEY (schoolLoc) REFERENCES Schools(loc) ON DELETE CASCADE
 );
