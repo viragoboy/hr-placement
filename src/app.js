@@ -316,10 +316,6 @@ function mapApplicationBody(body) {
 
 app.get('/admin/applications', async (req, res, next) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).send('Forbidden');
-    }
-
     const sortMap = {
       employee: 'u.displayName',
       submitted: 'a.dateSubmitted',
@@ -360,7 +356,6 @@ app.get('/admin/applications', async (req, res, next) => {
 
 app.post('/admin/applications/:id/status', async (req, res, next) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).send('Forbidden');
     await query('UPDATE Applications SET formStatus = @status WHERE id = @id', {
       id: Number(req.params.id),
       status: req.body.status
