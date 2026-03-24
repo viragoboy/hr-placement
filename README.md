@@ -1,6 +1,6 @@
 # HR Placement Transfer App
 
-Node + Express + MSSQL web app for GCPS lateral transfer requests.
+Node + Express + PostgreSQL web app for GCPS lateral transfer requests.
 
 ## Setup
 
@@ -9,10 +9,11 @@ Node + Express + MSSQL web app for GCPS lateral transfer requests.
    npm install
    ```
 2. Configure environment variables:
-   - `DB_SERVER`
-   - `DB_NAME`
-   - `DB_USER`
-   - `DB_PASSWORD`
+   - `PGHOST` (or `DB_SERVER`)
+   - `PGPORT` (or `DB_PORT`, default `5432`)
+   - `PGDATABASE` (or `DB_NAME`)
+   - `PGUSER` (or `DB_USER`)
+   - `PGPASSWORD` (or `DB_PASSWORD`)
    - `PORT` (optional)
    - `BANNER_MESSAGE` (optional system-wide banner)
 3. Create DB objects with `schema.sql`.
