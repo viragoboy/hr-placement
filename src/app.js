@@ -343,14 +343,12 @@ app.get('/admin/applications', async (req, res, next) => {
     const rows = result.recordset.map((row) => normalizeRowKeys(row, ADMIN_APPLICATION_KEYS));
 
     const grouped = rows.reduce((acc, item) => {
-      const school = item.currentSchoolName || 'Unknown School';
       const preferredLocation = item.preferredLocationName || 'No Preferred Location';
       const status = item.formStatus || 'Unknown Status';
 
-      if (!acc[school]) acc[school] = {};
-      if (!acc[school][preferredLocation]) acc[school][preferredLocation] = {};
-      if (!acc[school][preferredLocation][status]) acc[school][preferredLocation][status] = [];
-      acc[school][preferredLocation][status].push(item);
+      if (!acc[preferredLocation]) acc[preferredLocation] = {};
+      if (!acc[preferredLocation][status]) acc[preferredLocation][status] = [];
+      acc[preferredLocation][status].push(item);
       return acc;
     }, {});
 
