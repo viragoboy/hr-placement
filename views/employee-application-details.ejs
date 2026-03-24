@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Application</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="bg-body-tertiary">
+  <main class="container py-4 py-md-5">
+    <% if (bannerMessage) { %>
+      <div class="alert alert-warning border" role="alert"><%= bannerMessage %></div>
+    <% } %>
+
+    <div class="card shadow-sm">
+      <div class="card-body p-3 p-md-4 p-lg-5">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
+          <div>
+            <h1 class="h3 mb-1">My Application</h1>
+            <p class="text-body-secondary mb-0">Selected school row details and add-only school selection.</p>
+          </div>
+          <a class="btn btn-outline-secondary btn-sm" href="/my/applications">Back to my applications</a>
+        </div>
+
+        <% if (selectedLocationStatus) { %>
+          <section class="mb-4">
+            <h2 class="h5 border-bottom pb-2 mb-3">Selected Row</h2>
+            <div class="alert alert-secondary mb-0">
+              <strong><%= selectedLocationStatus.schoolName || selectedLocationStatus.schoolLoc %></strong>
+              <span class="mx-2">•</span>
+              <span>Status: <%= selectedLocationStatus.status || 'Submitted' %></span>
+            </div>
+          </section>
+        <% } %>
+
+        <section class="mb-4">
+          <h2 class="h5 border-bottom pb-2 mb-3">Current Schools and Statuses</h2>
+          <ul class="list-group">
+            <% preferredLocationStatuses.forEach((location) => { %>
+              <li class="list-group-item d-flex flex-wrap justify-content-between gap-2">
+                <span><%= location.schoolName || location.schoolLoc %></span>
+                <span class="badge text-bg-secondary"><%= location.status || 'Submitted' %></span>
+              </li>
+            <% }) %>
+          </ul>
+        </section>
+
+        <form method="post" action="/my/applications/<%= application.id %>/schools">
+          <input type="hidden" name="selectedSchoolLoc" value="<%= selectedLocationStatus?.schoolLoc || '' %>">
+          <section>
+            <div class="d-flex justify-content-between align-items-center gap-2 border-bottom pb-2 mb-3">
+              <h2 class="h5 mb-0">Add More Preferred School Locations</h2>
+              <span class="badge text-bg-info-subtle text-info-emphasis" id="selected-location-count">0 selected</span>
+            </div>
+
+            <% const categoryGroups = [
+              { key: 'Elementary School', label: 'Elementary' },
+              { key: 'Middle School', label: 'Middle' },
+              { key: 'High School', label: 'High' },
+              { key: 'Other', label: 'Other' }
+            ]; %>
+            <% const categoriesWithSchools = categoryGroups
+              .map(group => ({
+                ...group,
+                cssClass: group.key.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                schools: schools.filter(s => s.category === group.key)
+              }))
+              .filter(group => group.schools.length); %>
+            <% const maxRows = categoriesWithSchools.reduce((max, group) => Math.max(max, group.schools.length), 0); %>
+
+            <% if (categoriesWithSchools.length) { %>
+              <div class="table-responsive mb-3">
+                <table class="table table-bordered align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <% categoriesWithSchools.forEach(function(group){ %>
+                        <th class="text-center">
+                          <div class="d-flex justify-content-between align-items-center gap-2">
+                            <span><%= group.label %></span>
+                            <button class="btn btn-sm btn-outline-primary" type="button" onclick="setCategorySelection('<%= group.cssClass %>', true)">Select all</button>
+                          </div>
+                        </th>
+                      <% }) %>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% for (let row = 0; row < maxRows; row++) { %>
+                      <tr>
+                        <% categoriesWithSchools.forEach(function(group){ const s = group.schools[row]; %>
+                          <td>
+                            <% if (s) { const inputId = `school-${group.cssClass}-${row}`; const isLocked = selectedLocations.includes(s.loc); %>
+                              <div class="form-check">
+                                <% if (isLocked) { %>
+                                  <input type="hidden" name="preferredLocations" value="<%= s.loc %>" />
+                                <% } %>
+                                <input class="form-check-input school-group-<%= group.cssClass %>" type="checkbox" id="<%= inputId %>" name="preferredLocations" value="<%= s.loc %>" <%= isLocked ? 'checked disabled data-locked=true' : '' %> />
+                                <label class="form-check-label" for="<%= inputId %>"><%= s.locname %> <%= isLocked ? '(already selected)' : '' %></label>
+                              </div>
+                            <% } %>
+                          </td>
+                        <% }) %>
+                      </tr>
+                    <% } %>
+                  </tbody>
+                </table>
+              </div>
+            <% } else { %>
+              <p class="text-body-secondary mb-0">No school locations are currently available.</p>
+            <% } %>
+
+            <div class="d-flex justify-content-end border-top pt-3">
+              <button type="submit" class="btn btn-primary px-4">Save additional schools</button>
+            </div>
+          </section>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function setCategorySelection(category, checked) {
+      document.querySelectorAll('.school-group-' + category).forEach(function(box){
+        if (!box.dataset.locked) {
+          box.checked = checked;
+        }
+      });
+      refreshSelectedCount();
+    }
+
+    function refreshSelectedCount() {
+      const checkedCount = document.querySelectorAll('input[name="preferredLocations"]:checked').length;
+      const badge = document.getElementById('selected-location-count');
+      if (badge) {
+        badge.textContent = checkedCount + ' selected';
+      }
+    }
+
+    document.querySelectorAll('input[name="preferredLocations"]').forEach(function(box) {
+      box.addEventListener('change', refreshSelectedCount);
+    });
+
+    refreshSelectedCount();
+  </script>
+</body>
+</html>

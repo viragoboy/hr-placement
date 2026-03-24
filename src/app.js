@@ -22,6 +22,15 @@ const ADMIN_APPLICATION_KEYS = [
   'schoolLoc',
   'preferredLocationName'
 ];
+const EMPLOYEE_APPLICATION_KEYS = [
+  'id',
+  'requesterId',
+  'dateSubmitted',
+  'certificationID',
+  'locationStatus',
+  'schoolLoc',
+  'preferredLocationName'
+];
 const APPLICATION_KEYS = [
   'id',
   'requesterId',
@@ -170,6 +179,10 @@ app.get('/', (req, res) => {
 app.get('/request', async (req, res, next) => {
   try {
     const context = await getRequesterContext(req.user.userId);
+    if (context.application) {
+      return res.redirect('/my/applications');
+    }
+
     res.render('request-form', {
       ...context,
       certificateLevels: CERTIFICATE_LEVELS,
@@ -177,6 +190,147 @@ app.get('/request', async (req, res, next) => {
       errors: [],
       isReadOnly: Boolean(context.application) || !context.user
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/my/applications', async (req, res, next) => {
+  try {
+    const result = await query(`
+      SELECT a.id, a.requesterId, a.dateSubmitted, a.certificationID,
+             apl.status AS locationStatus, apl.schoolLoc, ps.locname AS preferredLocationName
+      FROM Applications a
+      LEFT JOIN ApplicationPreferredLocations apl ON apl.applicationId = a.id
+      LEFT JOIN Schools ps ON ps.loc = apl.schoolLoc
+      WHERE a.requesterId = @userId
+      ORDER BY ps.locname, apl.status
+    `, { userId: req.user.userId });
+
+    const rows = result.recordset.map((row) => normalizeRowKeys(row, EMPLOYEE_APPLICATION_KEYS));
+    const selectedSchool = req.query.school ? String(req.query.school) : '';
+    const selectedStatus = req.query.status ? String(req.query.status) : '';
+
+    const grouped = rows.reduce((acc, item) => {
+      const preferredLocation = item.preferredLocationName || 'No Preferred Location';
+      const status = item.locationStatus || 'Unknown Status';
+      const schoolMatches = !selectedSchool || preferredLocation === selectedSchool;
+      const statusMatches = !selectedStatus || status === selectedStatus;
+
+      if (!schoolMatches || !statusMatches) {
+        return acc;
+      }
+
+      if (!acc[preferredLocation]) acc[preferredLocation] = {};
+      if (!acc[preferredLocation][status]) acc[preferredLocation][status] = [];
+      acc[preferredLocation][status].push(item);
+      return acc;
+    }, {});
+
+    res.render('employee-dashboard', {
+      grouped,
+      selectedSchool,
+      selectedStatus,
+      bannerMessage: process.env.BANNER_MESSAGE || ''
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/my/applications/:id', async (req, res, next) => {
+  try {
+    const applicationId = Number(req.params.id);
+    const applicationResult = await query(`
+      SELECT id, requesterId, dateSubmitted, certificationID
+      FROM Applications
+      WHERE id = @applicationId
+    `, { applicationId });
+
+    const application = normalizeRowKeys(applicationResult.recordset[0], EMPLOYEE_APPLICATION_KEYS);
+    if (!application || application.requesterId !== req.user.userId) {
+      return res.status(404).send('Application not found.');
+    }
+
+    const locationsResult = await query(`
+      SELECT apl.schoolLoc, s.locname AS schoolName, apl.status
+      FROM ApplicationPreferredLocations apl
+      INNER JOIN Schools s ON s.loc = apl.schoolLoc
+      WHERE apl.applicationId = @applicationId
+      ORDER BY s.locname
+    `, { applicationId });
+    const preferredLocationStatuses = locationsResult.recordset.map((row) => normalizeRowKeys(row, PREFERRED_LOCATION_STATUS_KEYS));
+
+    const selectedSchoolLoc = req.query.schoolLoc ? String(req.query.schoolLoc) : '';
+    const selectedLocationStatus = selectedSchoolLoc
+      ? preferredLocationStatuses.find((location) => location.schoolLoc === selectedSchoolLoc)
+      : preferredLocationStatuses[0] || null;
+
+    const schoolsResult = await query('SELECT loc, locname, category FROM Schools ORDER BY category, locname');
+
+    res.render('employee-application-details', {
+      application,
+      preferredLocationStatuses,
+      selectedLocationStatus,
+      schools: schoolsResult.recordset,
+      selectedLocations: preferredLocationStatuses.map((location) => location.schoolLoc),
+      errors: [],
+      bannerMessage: process.env.BANNER_MESSAGE || ''
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post('/my/applications/:id/schools', async (req, res, next) => {
+  try {
+    const applicationId = Number(req.params.id);
+    const applicationResult = await query(`
+      SELECT id, requesterId
+      FROM Applications
+      WHERE id = @applicationId
+    `, { applicationId });
+    const application = normalizeRowKeys(applicationResult.recordset[0], EMPLOYEE_APPLICATION_KEYS);
+    if (!application || application.requesterId !== req.user.userId) {
+      return res.status(404).send('Application not found.');
+    }
+
+    const existingLocationsResult = await query(`
+      SELECT schoolLoc
+      FROM ApplicationPreferredLocations
+      WHERE applicationId = @applicationId
+    `, { applicationId });
+    const existingLocations = existingLocationsResult.recordset
+      .map((row) => normalizeRowKeys(row, PREFERRED_LOCATION_STATUS_KEYS).schoolLoc)
+      .filter(Boolean);
+
+    const preferredLocations = Array.isArray(req.body.preferredLocations)
+      ? req.body.preferredLocations
+      : req.body.preferredLocations
+        ? [req.body.preferredLocations]
+        : [];
+
+    const submittedLocations = [...new Set(preferredLocations.map((location) => String(location)))];
+    const missingExistingLocation = existingLocations.find((location) => !submittedLocations.includes(location));
+    if (missingExistingLocation) {
+      return res.status(400).send('Previously selected schools cannot be removed.');
+    }
+
+    for (const schoolLoc of submittedLocations) {
+      if (existingLocations.includes(schoolLoc)) {
+        continue;
+      }
+
+      await query(
+        "INSERT INTO ApplicationPreferredLocations (applicationId, schoolLoc, status) VALUES (@applicationId, @schoolLoc, 'Submitted')",
+        { applicationId, schoolLoc }
+      );
+    }
+
+    const redirectSchoolLoc = req.body.selectedSchoolLoc ? String(req.body.selectedSchoolLoc) : '';
+    res.redirect(redirectSchoolLoc
+      ? `/my/applications/${applicationId}?schoolLoc=${encodeURIComponent(redirectSchoolLoc)}`
+      : `/my/applications/${applicationId}`);
   } catch (err) {
     next(err);
   }
