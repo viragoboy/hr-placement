@@ -34,18 +34,6 @@
           </section>
         <% } %>
 
-        <section class="mb-4">
-          <h2 class="h5 border-bottom pb-2 mb-3">Current Schools and Statuses</h2>
-          <ul class="list-group">
-            <% preferredLocationStatuses.forEach((location) => { %>
-              <li class="list-group-item d-flex flex-wrap justify-content-between gap-2">
-                <span><%= location.schoolName || location.schoolLoc %></span>
-                <span class="badge text-bg-secondary"><%= location.status || 'Submitted' %></span>
-              </li>
-            <% }) %>
-          </ul>
-        </section>
-
         <% if (!user) { %>
           <div class="alert alert-danger" role="alert">User profile not found.</div>
         <% } %>
@@ -145,7 +133,14 @@
                         <th class="text-center">
                           <div class="d-flex justify-content-between align-items-center gap-2">
                             <span><%= group.label %></span>
-                            <button class="btn btn-sm btn-outline-primary" type="button" onclick="setCategorySelection('<%= group.cssClass %>', true)">Select all</button>
+                            <button
+                              class="btn btn-sm btn-outline-primary"
+                              type="button"
+                              data-category-toggle="<%= group.cssClass %>"
+                              onclick="toggleCategorySelection('<%= group.cssClass %>')"
+                            >
+                              Select all
+                            </button>
                           </div>
                         </th>
                       <% }) %>
@@ -239,6 +234,30 @@
         }
       });
       refreshSelectedCount();
+      refreshCategoryToggleButton(category);
+    }
+
+    function toggleCategorySelection(category) {
+      const selectableBoxes = Array.from(document.querySelectorAll('.school-group-' + category))
+        .filter(function(box) { return !box.dataset.locked; });
+      const areAllChecked = selectableBoxes.length && selectableBoxes.every(function(box) { return box.checked; });
+      setCategorySelection(category, !areAllChecked);
+    }
+
+    function refreshCategoryToggleButton(category) {
+      const button = document.querySelector('[data-category-toggle="' + category + '"]');
+      if (!button) return;
+
+      const selectableBoxes = Array.from(document.querySelectorAll('.school-group-' + category))
+        .filter(function(box) { return !box.dataset.locked; });
+      const areAllChecked = selectableBoxes.length && selectableBoxes.every(function(box) { return box.checked; });
+      button.textContent = areAllChecked ? 'Unselect all' : 'Select all';
+    }
+
+    function refreshAllCategoryToggleButtons() {
+      document.querySelectorAll('[data-category-toggle]').forEach(function(button) {
+        refreshCategoryToggleButton(button.dataset.categoryToggle);
+      });
     }
 
     function refreshSelectedCount() {
@@ -250,10 +269,17 @@
     }
 
     document.querySelectorAll('input[name="preferredLocations"]').forEach(function(box) {
-      box.addEventListener('change', refreshSelectedCount);
+      box.addEventListener('change', function() {
+        refreshSelectedCount();
+        const categoryClass = Array.from(box.classList).find(function(className) { return className.startsWith('school-group-'); });
+        if (categoryClass) {
+          refreshCategoryToggleButton(categoryClass.replace('school-group-', ''));
+        }
+      });
     });
 
     refreshSelectedCount();
+    refreshAllCategoryToggleButtons();
   </script>
 </body>
 </html>
