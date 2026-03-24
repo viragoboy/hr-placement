@@ -47,7 +47,9 @@
                         <div class="card mb-2">
                           <div class="card-body d-flex flex-column flex-lg-row justify-content-between gap-3">
                             <div>
-                              <div class="fw-semibold"><%= row.displayName || '—' %></div>
+                              <div class="fw-semibold">
+                                <a href="/admin/applications/<%= row.id %>" class="link-primary text-decoration-none"><%= row.displayName || '—' %></a>
+                              </div>
                               <div class="small text-secondary">
                                 Submitted: <%= row.dateSubmitted ? new Date(row.dateSubmitted).toLocaleDateString() : '—' %> ·
                                 Certification: <%= row.certificationID || '—' %> ·
@@ -55,15 +57,7 @@
                                 Current School: <%= row.currentSchoolName || '—' %>
                               </div>
                             </div>
-                            <form class="d-flex gap-2 align-items-start" method="post" action="/admin/applications/<%= row.id %>/status">
-                              <input type="hidden" name="schoolLoc" value="<%= row.schoolLoc %>">
-                              <select name="status" class="form-select form-select-sm">
-                                <% ['Submitted', 'Interview Requested', 'Not Available', 'Closed'].forEach((nextStatus) => { %>
-                                  <option value="<%= nextStatus %>" <%= row.locationStatus === nextStatus ? 'selected' : '' %>><%= nextStatus %></option>
-                                <% }) %>
-                              </select>
-                              <button class="btn btn-primary btn-sm">Update</button>
-                            </form>
+                            <a class="btn btn-outline-primary btn-sm align-self-start" href="/admin/applications/<%= row.id %>">View details</a>
                           </div>
                         </div>
                       <% }) %>

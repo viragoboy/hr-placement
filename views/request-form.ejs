@@ -18,9 +18,14 @@
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
           <div>
             <h1 class="h3 mb-1">GCPS Placement Preference Form</h1>
-            <p class="text-body-secondary mb-0">Complete and submit your placement preferences for review.</p>
+            <p class="text-body-secondary mb-0">
+              <%= isAdminView ? 'Review a submitted request and update school statuses.' : 'Complete and submit your placement preferences for review.' %>
+            </p>
           </div>
-          <% if (application) { %>
+          <% if (isAdminView) { %>
+            <a class="btn btn-outline-secondary btn-sm" href="/admin/applications">Back to dashboard</a>
+          <% } %>
+          <% if (application && !isAdminView) { %>
             <div class="text-md-end">
               <span class="text-body-secondary">School Statuses</span>
               <div class="d-flex flex-wrap justify-content-md-end gap-1 mt-1">
@@ -37,6 +42,27 @@
             </div>
           <% } %>
         </div>
+
+        <% if (application && isAdminView) { %>
+          <section class="mb-4">
+            <h2 class="h5 border-bottom pb-2 mb-3">School Statuses</h2>
+            <div class="d-grid gap-2">
+              <% preferredLocationStatuses.forEach((location) => { %>
+                <form class="d-flex flex-column flex-md-row align-items-md-center gap-2 border rounded p-2 bg-light-subtle" method="post" action="/admin/applications/<%= application.id %>/status">
+                  <input type="hidden" name="schoolLoc" value="<%= location.schoolLoc %>">
+                  <input type="hidden" name="returnToDetails" value="true">
+                  <div class="fw-semibold flex-grow-1"><%= location.schoolName || location.schoolLoc %></div>
+                  <select name="status" class="form-select form-select-sm">
+                    <% ['Submitted', 'Interview Requested', 'Not Available', 'Closed'].forEach((nextStatus) => { %>
+                      <option value="<%= nextStatus %>" <%= location.status === nextStatus ? 'selected' : '' %>><%= nextStatus %></option>
+                    <% }) %>
+                  </select>
+                  <button class="btn btn-primary btn-sm">Update</button>
+                </form>
+              <% }) %>
+            </div>
+          </section>
+        <% } %>
 
         <% if (!user) { %>
           <div class="alert alert-danger" role="alert">User profile not found.</div>

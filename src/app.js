@@ -146,6 +146,20 @@ async function getRequesterContext(userId) {
   };
 }
 
+async function getApplicationContext(applicationId) {
+  const applicationResult = await query(`
+    SELECT a.id, a.requesterId
+    FROM Applications a
+    WHERE a.id = @applicationId
+  `, { applicationId });
+  const applicationRecord = applicationResult.recordset[0];
+  if (!applicationRecord) return null;
+
+  const requesterContext = await getRequesterContext(applicationRecord.requesterId);
+  if (!requesterContext.application) return null;
+  return requesterContext;
+}
+
 app.get('/', (req, res) => {
   if (req.user.role === 'admin') {
     return res.redirect('/admin/applications');
@@ -368,6 +382,26 @@ app.get('/admin/applications', async (req, res, next) => {
   }
 });
 
+app.get('/admin/applications/:id', async (req, res, next) => {
+  try {
+    const context = await getApplicationContext(Number(req.params.id));
+    if (!context) {
+      return res.status(404).send('Application not found.');
+    }
+
+    res.render('request-form', {
+      ...context,
+      certificateLevels: CERTIFICATE_LEVELS,
+      bannerMessage: process.env.BANNER_MESSAGE || '',
+      errors: [],
+      isReadOnly: true,
+      isAdminView: true
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.post('/admin/applications/:id/status', async (req, res, next) => {
   try {
     const schoolLoc = req.body.schoolLoc;
@@ -380,7 +414,8 @@ app.post('/admin/applications/:id/status', async (req, res, next) => {
       schoolLoc,
       status: req.body.status
     });
-    res.redirect('/admin/applications');
+    const returnToDetails = req.body.returnToDetails === 'true';
+    res.redirect(returnToDetails ? `/admin/applications/${Number(req.params.id)}` : '/admin/applications');
   } catch (err) {
     next(err);
   }
