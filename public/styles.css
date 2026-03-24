@@ -1,10 +1,15 @@
-body { font-family: Arial, sans-serif; margin: 1.5rem; }
-form { display: grid; gap: 0.8rem; max-width: 900px; }
-fieldset { border: 1px solid #ccc; padding: 0.7rem; }
-label { display: grid; gap: 0.2rem; }
-.grid { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 0.7rem; }
-.banner { background: #ffefc0; padding: 0.8rem; border: 1px solid #edcf76; margin-bottom: 1rem; }
-.errors { color: #9a0000; }
-.inline { margin-left: .5rem; }
-table { border-collapse: collapse; width: 100%; margin: 0.5rem 0 1rem; }
-th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+body {
+  font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.card {
+  border-radius: 0.8rem;
+}
+
+dt {
+  font-weight: 500;
+}
+
+textarea {
+  resize: vertical;
+}
