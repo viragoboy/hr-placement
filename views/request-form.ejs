@@ -101,9 +101,18 @@
               <h2 class="h5 mb-0">Preferred School Locations <span class="text-danger">*</span></h2>
               <span class="badge text-bg-info-subtle text-info-emphasis" id="selected-location-count">0 selected</span>
             </div>
-            <% const categories = ['Elementary', 'Middle', 'High', 'Other']; %>
-            <% const categoriesWithSchools = categories
-              .map(cat => ({ cat, schools: schools.filter(s => s.category === cat) }))
+            <% const categoryGroups = [
+              { key: 'Elementary School', label: 'Elementary' },
+              { key: 'Middle School', label: 'Middle' },
+              { key: 'High School', label: 'High' },
+              { key: 'Other', label: 'Other' }
+            ]; %>
+            <% const categoriesWithSchools = categoryGroups
+              .map(group => ({
+                ...group,
+                cssClass: group.key.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                schools: schools.filter(s => s.category === group.key)
+              }))
               .filter(group => group.schools.length); %>
             <% const maxRows = categoriesWithSchools.reduce((max, group) => Math.max(max, group.schools.length), 0); %>
 
@@ -115,9 +124,9 @@
                       <% categoriesWithSchools.forEach(function(group){ %>
                         <th class="text-center">
                           <div class="d-flex justify-content-between align-items-center gap-2">
-                            <span><%= group.cat %></span>
+                            <span><%= group.label %></span>
                             <% if (!isReadOnly) { %>
-                              <button class="btn btn-sm btn-outline-primary" type="button" onclick="setCategorySelection('<%= group.cat %>', true)">Select all</button>
+                              <button class="btn btn-sm btn-outline-primary" type="button" onclick="setCategorySelection('<%= group.cssClass %>', true)">Select all</button>
                             <% } %>
                           </div>
                         </th>
@@ -129,9 +138,9 @@
                       <tr>
                         <% categoriesWithSchools.forEach(function(group){ const s = group.schools[row]; %>
                           <td>
-                            <% if (s) { const inputId = `school-${group.cat}-${row}`; %>
+                            <% if (s) { const inputId = `school-${group.cssClass}-${row}`; %>
                               <div class="form-check">
-                                <input class="form-check-input school-<%= group.cat %>" type="checkbox" id="<%= inputId %>" name="preferredLocations" value="<%= s.loc %>" <%= selectedLocations.includes(s.loc) ? 'checked' : '' %> <%= isReadOnly ? 'disabled' : '' %> />
+                                <input class="form-check-input school-group-<%= group.cssClass %>" type="checkbox" id="<%= inputId %>" name="preferredLocations" value="<%= s.loc %>" <%= selectedLocations.includes(s.loc) ? 'checked' : '' %> <%= isReadOnly ? 'disabled' : '' %> />
                                 <label class="form-check-label" for="<%= inputId %>"><%= s.locname %></label>
                               </div>
                             <% } %>
@@ -207,7 +216,7 @@
 
   <script>
     function setCategorySelection(category, checked) {
-      document.querySelectorAll('.school-' + category).forEach(function(box){ box.checked = checked; });
+      document.querySelectorAll('.school-group-' + category).forEach(function(box){ box.checked = checked; });
       refreshSelectedCount();
     }
 
