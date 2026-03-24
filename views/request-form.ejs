@@ -102,28 +102,49 @@
               <span class="badge text-bg-info-subtle text-info-emphasis" id="selected-location-count">0 selected</span>
             </div>
             <% const categories = ['Elementary', 'Middle', 'High', 'Other']; %>
-            <% categories.forEach(function(cat){ const filtered = schools.filter(s => s.category === cat); if (!filtered.length) return; %>
-              <div class="card mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center py-2">
-                  <h3 class="h6 mb-0"><%= cat %></h3>
-                  <% if (!isReadOnly) { %>
-                    <button class="btn btn-sm btn-outline-primary" type="button" onclick="setCategorySelection('<%= cat %>', true)">Select all</button>
-                  <% } %>
-                </div>
-                <div class="card-body">
-                  <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-2">
-                    <% filtered.forEach(function(s, idx){ const inputId = `school-${cat}-${idx}`; %>
-                      <div class="col">
-                        <div class="form-check">
-                          <input class="form-check-input school-<%= cat %>" type="checkbox" id="<%= inputId %>" name="preferredLocations" value="<%= s.loc %>" <%= selectedLocations.includes(s.loc) ? 'checked' : '' %> <%= isReadOnly ? 'disabled' : '' %> />
-                          <label class="form-check-label" for="<%= inputId %>"><%= s.locname %></label>
-                        </div>
-                      </div>
-                    <% }) %>
-                  </div>
-                </div>
+            <% const categoriesWithSchools = categories
+              .map(cat => ({ cat, schools: schools.filter(s => s.category === cat) }))
+              .filter(group => group.schools.length); %>
+            <% const maxRows = categoriesWithSchools.reduce((max, group) => Math.max(max, group.schools.length), 0); %>
+
+            <% if (categoriesWithSchools.length) { %>
+              <div class="table-responsive">
+                <table class="table table-bordered align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <% categoriesWithSchools.forEach(function(group){ %>
+                        <th class="text-center">
+                          <div class="d-flex justify-content-between align-items-center gap-2">
+                            <span><%= group.cat %></span>
+                            <% if (!isReadOnly) { %>
+                              <button class="btn btn-sm btn-outline-primary" type="button" onclick="setCategorySelection('<%= group.cat %>', true)">Select all</button>
+                            <% } %>
+                          </div>
+                        </th>
+                      <% }) %>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% for (let row = 0; row < maxRows; row++) { %>
+                      <tr>
+                        <% categoriesWithSchools.forEach(function(group){ const s = group.schools[row]; %>
+                          <td>
+                            <% if (s) { const inputId = `school-${group.cat}-${row}`; %>
+                              <div class="form-check">
+                                <input class="form-check-input school-<%= group.cat %>" type="checkbox" id="<%= inputId %>" name="preferredLocations" value="<%= s.loc %>" <%= selectedLocations.includes(s.loc) ? 'checked' : '' %> <%= isReadOnly ? 'disabled' : '' %> />
+                                <label class="form-check-label" for="<%= inputId %>"><%= s.locname %></label>
+                              </div>
+                            <% } %>
+                          </td>
+                        <% }) %>
+                      </tr>
+                    <% } %>
+                  </tbody>
+                </table>
               </div>
-            <% }) %>
+            <% } else { %>
+              <p class="text-body-secondary mb-0">No school locations are currently available.</p>
+            <% } %>
           </section>
 
           <section class="mb-4">
