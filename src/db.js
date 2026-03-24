@@ -1,30 +1,80 @@
-const sql = require('mssql');
+const { Pool } = require('pg');
 
 const config = {
-  server: process.env.DB_SERVER || 'localhost',
-  database: process.env.DB_NAME || 'hr_placement',
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  options: {
-    encrypt: process.env.DB_ENCRYPT === 'true',
-    trustServerCertificate: process.env.DB_TRUST_SERVER_CERT !== 'false'
-  }
+  host: process.env.PGHOST || process.env.DB_SERVER || 'localhost',
+  port: Number(process.env.PGPORT || process.env.DB_PORT || 5432),
+  database: process.env.PGDATABASE || process.env.DB_NAME || 'hr_placement',
+  user: process.env.PGUSER || process.env.DB_USER,
+  password: process.env.PGPASSWORD || process.env.DB_PASSWORD,
+  ssl: process.env.DB_ENCRYPT === 'true'
+    ? { rejectUnauthorized: process.env.DB_TRUST_SERVER_CERT === 'false' }
+    : false
 };
 
 let pool;
 
-async function getPool() {
+function getPool() {
   if (!pool) {
-    pool = await sql.connect(config);
+    pool = new Pool(config);
   }
   return pool;
 }
 
-async function query(statement, bind = {}) {
-  const p = await getPool();
-  const req = p.request();
-  Object.entries(bind).forEach(([key, value]) => req.input(key, value));
-  return req.query(statement);
+function normalizeStatement(statement, bind = {}) {
+  const parameterOrder = [];
+  const parameterIndex = new Map();
+
+  let text = '';
+  let i = 0;
+  let inSingleQuote = false;
+
+  while (i < statement.length) {
+    const current = statement[i];
+
+    if (current === "'") {
+      text += current;
+      if (inSingleQuote && statement[i + 1] === "'") {
+        text += statement[i + 1];
+        i += 2;
+        continue;
+      }
+      inSingleQuote = !inSingleQuote;
+      i += 1;
+      continue;
+    }
+
+    if (!inSingleQuote && current === '@') {
+      const match = statement.slice(i).match(/^@([a-zA-Z_][a-zA-Z0-9_]*)/);
+      if (match) {
+        const key = match[1];
+        if (!Object.prototype.hasOwnProperty.call(bind, key)) {
+          throw new Error(`Missing bind parameter: ${key}`);
+        }
+
+        if (!parameterIndex.has(key)) {
+          parameterOrder.push(key);
+          parameterIndex.set(key, parameterOrder.length);
+        }
+
+        text += `$${parameterIndex.get(key)}`;
+        i += key.length + 1;
+        continue;
+      }
+    }
+
+    text += current;
+    i += 1;
+  }
+
+  const values = parameterOrder.map((key) => bind[key]);
+  return { text, values };
 }
 
-module.exports = { sql, getPool, query };
+async function query(statement, bind = {}) {
+  const client = getPool();
+  const normalized = normalizeStatement(statement, bind);
+  const result = await client.query(normalized.text, normalized.values);
+  return { ...result, recordset: result.rows };
+}
+
+module.exports = { getPool, query };

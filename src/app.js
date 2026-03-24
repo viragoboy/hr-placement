@@ -131,14 +131,14 @@ app.post('/request', async (req, res, next) => {
           prefTeachingAssignment1, additionalInfo1, prefTeachingAssignment2, additionalInfo2, prefTeachingAssignment3, additionalInfo3,
           speaksFrench, speaksKorean, speaksSpanish, speaksOther, otherLang, extraCurriculum,
           certificationID, fieldCertification, certificateLevel, areaOfConcentration, otherReason, dateSubmitted
-        ) OUTPUT INSERTED.id VALUES (
+        ) VALUES (
           @requesterId, 'Submitted', @curPositionType, @reasonForRequest, @verifyPDP, @verifyCertificate,
           @yearsOfTeaching, @yearsOfAdmin, @yearsOfCertificated, @yearsTotalGCPS, @yearsTotalExpNonGCPS,
           @verifyInvoluntarilyToCurLoc, @verifyToHeadCoach, @verifyToSpecialEd,
           @prefTeachingAssignment1, @additionalInfo1, @prefTeachingAssignment2, @additionalInfo2, @prefTeachingAssignment3, @additionalInfo3,
           @speaksFrench, @speaksKorean, @speaksSpanish, @speaksOther, @otherLang, @extraCurriculum,
-          @certificationID, @fieldCertification, @certificateLevel, @areaOfConcentration, @otherReason, GETDATE()
-        )
+          @certificationID, @fieldCertification, @certificateLevel, @areaOfConcentration, @otherReason, NOW()
+        ) RETURNING id
       `, {
         requesterId: req.user.userId,
         ...mapApplicationBody(req.body)
