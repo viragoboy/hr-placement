@@ -32,16 +32,16 @@ async function getRequesterContext(userId) {
   `, { userId });
 
   const schoolsResult = await query('SELECT loc, locname, category FROM Schools ORDER BY category, locname');
-  const jobsResult = await query('SELECT id, jobName FROM Jobs ORDER BY jobName');
+  const jobsResult = await query('SELECT id, jobName FROM jobs ORDER BY jobName');
   const applicationResult = await query(`
     SELECT a.*,
       j1.jobName AS prefJobName1,
       j2.jobName AS prefJobName2,
       j3.jobName AS prefJobName3
     FROM Applications a
-    LEFT JOIN Jobs j1 ON j1.id = a.prefTeachingAssignment1
-    LEFT JOIN Jobs j2 ON j2.id = a.prefTeachingAssignment2
-    LEFT JOIN Jobs j3 ON j3.id = a.prefTeachingAssignment3
+    LEFT JOIN jobs j1 ON j1.id = a.prefTeachingAssignment1
+    LEFT JOIN jobs j2 ON j2.id = a.prefTeachingAssignment2
+    LEFT JOIN jobs j3 ON j3.id = a.prefTeachingAssignment3
     WHERE a.requesterId = @userId
   `, { userId });
 
