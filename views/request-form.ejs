@@ -23,7 +23,7 @@
             </p>
           </div>
           <% if (isAdminView) { %>
-            <a class="btn btn-outline-secondary btn-sm" href="/admin/applications">Back to dashboard</a>
+            <a class="btn btn-outline-secondary btn-sm" href="/admin/applications?<%= selectedSchool ? 'school=' + encodeURIComponent(selectedSchool) + '&' : '' %><%= selectedStatus ? 'status=' + encodeURIComponent(selectedStatus) + '&' : '' %>sortBy=<%= encodeURIComponent(selectedSortBy || 'employee') %>">Back to dashboard</a>
           <% } %>
           <% if (application && !isAdminView) { %>
             <div class="text-md-end">

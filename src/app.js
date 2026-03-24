@@ -365,10 +365,18 @@ app.get('/admin/applications', async (req, res, next) => {
     `);
 
     const rows = result.recordset.map((row) => normalizeRowKeys(row, ADMIN_APPLICATION_KEYS));
+    const selectedSchool = req.query.school ? String(req.query.school) : '';
+    const selectedStatus = req.query.status ? String(req.query.status) : '';
 
     const grouped = rows.reduce((acc, item) => {
       const preferredLocation = item.preferredLocationName || 'No Preferred Location';
       const status = item.locationStatus || 'Unknown Status';
+      const schoolMatches = !selectedSchool || preferredLocation === selectedSchool;
+      const statusMatches = !selectedStatus || status === selectedStatus;
+
+      if (!schoolMatches || !statusMatches) {
+        return acc;
+      }
 
       if (!acc[preferredLocation]) acc[preferredLocation] = {};
       if (!acc[preferredLocation][status]) acc[preferredLocation][status] = [];
@@ -376,7 +384,13 @@ app.get('/admin/applications', async (req, res, next) => {
       return acc;
     }, {});
 
-    res.render('admin-dashboard', { grouped, sortBy: req.query.sortBy || 'employee', bannerMessage: process.env.BANNER_MESSAGE || '' });
+    res.render('admin-dashboard', {
+      grouped,
+      sortBy: req.query.sortBy || 'employee',
+      bannerMessage: process.env.BANNER_MESSAGE || '',
+      selectedSchool,
+      selectedStatus
+    });
   } catch (err) {
     next(err);
   }
@@ -395,7 +409,10 @@ app.get('/admin/applications/:id', async (req, res, next) => {
       bannerMessage: process.env.BANNER_MESSAGE || '',
       errors: [],
       isReadOnly: true,
-      isAdminView: true
+      isAdminView: true,
+      selectedSortBy: req.query.sortBy ? String(req.query.sortBy) : 'employee',
+      selectedSchool: req.query.school ? String(req.query.school) : '',
+      selectedStatus: req.query.status ? String(req.query.status) : ''
     });
   } catch (err) {
     next(err);
