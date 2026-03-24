@@ -241,41 +241,23 @@ app.get('/my/applications', async (req, res, next) => {
 app.get('/my/applications/:id', async (req, res, next) => {
   try {
     const applicationId = Number(req.params.id);
-    const applicationResult = await query(`
-      SELECT id, requesterId, dateSubmitted, certificationID
-      FROM Applications
-      WHERE id = @applicationId
-    `, { applicationId });
-
-    const application = normalizeRowKeys(applicationResult.recordset[0], EMPLOYEE_APPLICATION_KEYS);
-    if (!application || application.requesterId !== req.user.userId) {
+    const context = await getApplicationContext(applicationId);
+    if (!context || context.user?.userId !== req.user.userId) {
       return res.status(404).send('Application not found.');
     }
 
-    const locationsResult = await query(`
-      SELECT apl.schoolLoc, s.locname AS schoolName, apl.status
-      FROM ApplicationPreferredLocations apl
-      INNER JOIN Schools s ON s.loc = apl.schoolLoc
-      WHERE apl.applicationId = @applicationId
-      ORDER BY s.locname
-    `, { applicationId });
-    const preferredLocationStatuses = locationsResult.recordset.map((row) => normalizeRowKeys(row, PREFERRED_LOCATION_STATUS_KEYS));
-
     const selectedSchoolLoc = req.query.schoolLoc ? String(req.query.schoolLoc) : '';
     const selectedLocationStatus = selectedSchoolLoc
-      ? preferredLocationStatuses.find((location) => location.schoolLoc === selectedSchoolLoc)
-      : preferredLocationStatuses[0] || null;
-
-    const schoolsResult = await query('SELECT loc, locname, category FROM Schools ORDER BY category, locname');
+      ? context.preferredLocationStatuses.find((location) => location.schoolLoc === selectedSchoolLoc)
+      : context.preferredLocationStatuses[0] || null;
 
     res.render('employee-application-details', {
-      application,
-      preferredLocationStatuses,
+      ...context,
+      certificateLevels: CERTIFICATE_LEVELS,
       selectedLocationStatus,
-      schools: schoolsResult.recordset,
-      selectedLocations: preferredLocationStatuses.map((location) => location.schoolLoc),
       errors: [],
-      bannerMessage: process.env.BANNER_MESSAGE || ''
+      bannerMessage: process.env.BANNER_MESSAGE || '',
+      isReadOnly: true
     });
   } catch (err) {
     next(err);
