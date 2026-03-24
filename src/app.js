@@ -10,6 +10,17 @@ app.use(express.static('public'));
 const CERTIFICATE_LEVELS = ['T4', 'T5', 'T6', 'S4', 'S5', 'S6', 'L4', 'L5', 'L6'];
 const REQUESTER_USER_KEYS = ['userId', 'displayName', 'currentJobName', 'currentSchoolLoc', 'currentSchoolName', 'principal'];
 const JOB_KEYS = ['id', 'jobName'];
+const ADMIN_APPLICATION_KEYS = [
+  'id',
+  'formStatus',
+  'dateSubmitted',
+  'certificationID',
+  'curPositionType',
+  'displayName',
+  'currentSchoolName',
+  'principal',
+  'preferredLocations'
+];
 const APPLICATION_KEYS = [
   'id',
   'requesterId',
@@ -330,7 +341,9 @@ app.get('/admin/applications', async (req, res, next) => {
       ORDER BY ${sortBy}
     `);
 
-    const grouped = result.recordset.reduce((acc, item) => {
+    const rows = result.recordset.map((row) => normalizeRowKeys(row, ADMIN_APPLICATION_KEYS));
+
+    const grouped = rows.reduce((acc, item) => {
       const key = item.currentSchoolName || 'Unknown School';
       if (!acc[key]) acc[key] = [];
       acc[key].push(item);
