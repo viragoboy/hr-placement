@@ -12,19 +12,19 @@ const REQUESTER_USER_KEYS = ['userId', 'displayName', 'currentJobName', 'current
 const JOB_KEYS = ['id', 'jobName'];
 const ADMIN_APPLICATION_KEYS = [
   'id',
-  'formStatus',
+  'locationStatus',
   'dateSubmitted',
   'certificationID',
   'curPositionType',
   'displayName',
   'currentSchoolName',
   'principal',
+  'schoolLoc',
   'preferredLocationName'
 ];
 const APPLICATION_KEYS = [
   'id',
   'requesterId',
-  'formStatus',
   'curPositionType',
   'reasonForRequest',
   'verifyPDP',
@@ -56,6 +56,7 @@ const APPLICATION_KEYS = [
   'otherReason',
   'dateSubmitted'
 ];
+const PREFERRED_LOCATION_STATUS_KEYS = ['schoolLoc', 'schoolName', 'status'];
 
 function parseBool(value) {
   return value === 'on' || value === 'true' || value === true;
@@ -116,11 +117,23 @@ async function getRequesterContext(userId) {
 
   let selectedLocations = [];
   if (application) {
-    const pref = await query(
-      'SELECT schoolLoc FROM ApplicationPreferredLocations WHERE applicationId = @applicationId',
-      { applicationId: application.id }
-    );
-    selectedLocations = pref.recordset.map((r) => r.schoolLoc);
+    const pref = await query(`
+      SELECT apl.schoolLoc, s.locname AS schoolName, apl.status
+      FROM ApplicationPreferredLocations apl
+      LEFT JOIN Schools s ON s.loc = apl.schoolLoc
+      WHERE apl.applicationId = @applicationId
+      ORDER BY s.locname
+    `, { applicationId: application.id });
+    const preferredLocationStatuses = pref.recordset.map((row) => normalizeRowKeys(row, PREFERRED_LOCATION_STATUS_KEYS));
+    selectedLocations = preferredLocationStatuses.map((r) => r.schoolLoc);
+    return {
+      user,
+      schools: schoolsResult.recordset,
+      jobs,
+      application,
+      selectedLocations,
+      preferredLocationStatuses
+    };
   }
 
   return {
@@ -128,7 +141,8 @@ async function getRequesterContext(userId) {
     schools: schoolsResult.recordset,
     jobs,
     application,
-    selectedLocations
+    selectedLocations,
+    preferredLocationStatuses: []
   };
 }
 
@@ -204,14 +218,14 @@ app.post('/request', async (req, res, next) => {
     if (!existing) {
       const inserted = await query(`
         INSERT INTO Applications (
-          requesterId, formStatus, curPositionType, reasonForRequest, verifyPDP, verifyCertificate,
+          requesterId, curPositionType, reasonForRequest, verifyPDP, verifyCertificate,
           yearsOfTeaching, yearsOfAdmin, yearsOfCertificated, yearsTotalGCPS, yearsTotalExpNonGCPS,
           verifyInvoluntarilyToCurLoc, verifyToHeadCoach, verifyToSpecialEd,
           prefTeachingAssignment1, additionalInfo1, prefTeachingAssignment2, additionalInfo2, prefTeachingAssignment3, additionalInfo3,
           speaksFrench, speaksKorean, speaksSpanish, speaksOther, otherLang, extraCurriculum,
           certificationID, fieldCertification, certificateLevel, areaOfConcentration, otherReason, dateSubmitted
         ) VALUES (
-          @requesterId, 'Submitted', @curPositionType, @reasonForRequest, @verifyPDP, @verifyCertificate,
+          @requesterId, @curPositionType, @reasonForRequest, @verifyPDP, @verifyCertificate,
           @yearsOfTeaching, @yearsOfAdmin, @yearsOfCertificated, @yearsTotalGCPS, @yearsTotalExpNonGCPS,
           @verifyInvoluntarilyToCurLoc, @verifyToHeadCoach, @verifyToSpecialEd,
           @prefTeachingAssignment1, @additionalInfo1, @prefTeachingAssignment2, @additionalInfo2, @prefTeachingAssignment3, @additionalInfo3,
@@ -226,7 +240,7 @@ app.post('/request', async (req, res, next) => {
       const applicationId = inserted.recordset[0].id;
       for (const schoolLoc of preferredLocations) {
         await query(
-          "INSERT INTO ApplicationPreferredLocations (applicationId, schoolLoc, status) VALUES (@applicationId, @schoolLoc, 'Pending')",
+          "INSERT INTO ApplicationPreferredLocations (applicationId, schoolLoc, status) VALUES (@applicationId, @schoolLoc, 'Submitted')",
           { applicationId, schoolLoc }
         );
       }
@@ -268,7 +282,7 @@ app.post('/request', async (req, res, next) => {
       await query('DELETE FROM ApplicationPreferredLocations WHERE applicationId = @applicationId', { applicationId: existing.id });
       for (const schoolLoc of preferredLocations) {
         await query(
-          "INSERT INTO ApplicationPreferredLocations (applicationId, schoolLoc, status) VALUES (@applicationId, @schoolLoc, 'Pending')",
+          "INSERT INTO ApplicationPreferredLocations (applicationId, schoolLoc, status) VALUES (@applicationId, @schoolLoc, 'Submitted')",
           { applicationId: existing.id, schoolLoc }
         );
       }
@@ -320,12 +334,12 @@ app.get('/admin/applications', async (req, res, next) => {
       employee: 'u.displayName',
       submitted: 'a.dateSubmitted',
       cert: 'a.certificationID',
-      status: 'a.formStatus'
+      status: 'apl.status'
     };
     const sortBy = sortMap[req.query.sortBy] || 'u.displayName';
 
     const result = await query(`
-      SELECT a.id, a.formStatus, a.dateSubmitted, a.certificationID, a.curPositionType,
+      SELECT a.id, apl.status AS locationStatus, apl.schoolLoc, a.dateSubmitted, a.certificationID, a.curPositionType,
              u.displayName, s.locname AS currentSchoolName, s.principal,
              ps.locname AS preferredLocationName
       FROM Applications a
@@ -333,14 +347,14 @@ app.get('/admin/applications', async (req, res, next) => {
       LEFT JOIN Schools s ON s.loc = u.currentSchoolLoc
       LEFT JOIN ApplicationPreferredLocations apl ON apl.applicationId = a.id
       LEFT JOIN Schools ps ON ps.loc = apl.schoolLoc
-      ORDER BY ps.locname, a.formStatus, ${sortBy}
+      ORDER BY ps.locname, apl.status, ${sortBy}
     `);
 
     const rows = result.recordset.map((row) => normalizeRowKeys(row, ADMIN_APPLICATION_KEYS));
 
     const grouped = rows.reduce((acc, item) => {
       const preferredLocation = item.preferredLocationName || 'No Preferred Location';
-      const status = item.formStatus || 'Unknown Status';
+      const status = item.locationStatus || 'Unknown Status';
 
       if (!acc[preferredLocation]) acc[preferredLocation] = {};
       if (!acc[preferredLocation][status]) acc[preferredLocation][status] = [];
@@ -356,8 +370,14 @@ app.get('/admin/applications', async (req, res, next) => {
 
 app.post('/admin/applications/:id/status', async (req, res, next) => {
   try {
-    await query('UPDATE Applications SET formStatus = @status WHERE id = @id', {
+    const schoolLoc = req.body.schoolLoc;
+    if (!schoolLoc) {
+      return res.status(400).send('Missing school location for status update.');
+    }
+
+    await query('UPDATE ApplicationPreferredLocations SET status = @status WHERE applicationId = @id AND schoolLoc = @schoolLoc', {
       id: Number(req.params.id),
+      schoolLoc,
       status: req.body.status
     });
     res.redirect('/admin/applications');
