@@ -152,7 +152,7 @@ async function getApplicationContext(applicationId) {
     FROM Applications a
     WHERE a.id = @applicationId
   `, { applicationId });
-  const applicationRecord = applicationResult.recordset[0];
+  const applicationRecord = normalizeRowKeys(applicationResult.recordset[0], APPLICATION_KEYS);
   if (!applicationRecord) return null;
 
   const requesterContext = await getRequesterContext(applicationRecord.requesterId);
