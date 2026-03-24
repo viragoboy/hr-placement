@@ -18,12 +18,23 @@
             <p class="text-secondary mb-0">Review requests, sort entries, and update statuses.</p>
           </div>
           <div class="btn-group" role="group" aria-label="Sort options">
-            <a class="btn btn-outline-primary btn-sm <%= sortBy === 'employee' ? 'active' : '' %>" href="?sortBy=employee">Employee</a>
-            <a class="btn btn-outline-primary btn-sm <%= sortBy === 'submitted' ? 'active' : '' %>" href="?sortBy=submitted">Submitted</a>
-            <a class="btn btn-outline-primary btn-sm <%= sortBy === 'cert' ? 'active' : '' %>" href="?sortBy=cert">Certification</a>
-            <a class="btn btn-outline-primary btn-sm <%= sortBy === 'status' ? 'active' : '' %>" href="?sortBy=status">Status</a>
+            <a class="btn btn-outline-primary btn-sm <%= sortBy === 'employee' ? 'active' : '' %>" href="?sortBy=employee<%= selectedSchool ? '&school=' + encodeURIComponent(selectedSchool) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %>">Employee</a>
+            <a class="btn btn-outline-primary btn-sm <%= sortBy === 'submitted' ? 'active' : '' %>" href="?sortBy=submitted<%= selectedSchool ? '&school=' + encodeURIComponent(selectedSchool) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %>">Submitted</a>
+            <a class="btn btn-outline-primary btn-sm <%= sortBy === 'cert' ? 'active' : '' %>" href="?sortBy=cert<%= selectedSchool ? '&school=' + encodeURIComponent(selectedSchool) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %>">Certification</a>
+            <a class="btn btn-outline-primary btn-sm <%= sortBy === 'status' ? 'active' : '' %>" href="?sortBy=status<%= selectedSchool ? '&school=' + encodeURIComponent(selectedSchool) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %>">Status</a>
           </div>
         </div>
+
+        <% if (selectedSchool || selectedStatus) { %>
+          <div class="alert alert-secondary d-flex flex-column flex-md-row justify-content-md-between align-items-md-center gap-2 py-2">
+            <div class="small">
+              Showing selection:
+              <span class="fw-semibold"><%= selectedSchool || 'All schools' %></span> /
+              <span class="fw-semibold"><%= selectedStatus || 'All statuses' %></span>
+            </div>
+            <a href="/admin/applications?sortBy=<%= encodeURIComponent(sortBy) %>" class="btn btn-outline-secondary btn-sm">Clear selection</a>
+          </div>
+        <% } %>
 
         <% if (!Object.keys(grouped).length) { %>
           <div class="alert alert-info mb-0">No applications have been submitted yet.</div>
@@ -48,7 +59,7 @@
                           <div class="card-body d-flex flex-column flex-lg-row justify-content-between gap-3">
                             <div>
                               <div class="fw-semibold">
-                                <a href="/admin/applications/<%= row.id %>" class="link-primary text-decoration-none"><%= row.displayName || '—' %></a>
+                                <a href="/admin/applications/<%= row.id %>?school=<%= encodeURIComponent(preferredLocation) %>&status=<%= encodeURIComponent(status) %>&sortBy=<%= encodeURIComponent(sortBy) %>" class="link-primary text-decoration-none"><%= row.displayName || '—' %></a>
                               </div>
                               <div class="small text-secondary">
                                 Submitted: <%= row.dateSubmitted ? new Date(row.dateSubmitted).toLocaleDateString() : '—' %> ·
@@ -57,7 +68,7 @@
                                 Current School: <%= row.currentSchoolName || '—' %>
                               </div>
                             </div>
-                            <a class="btn btn-outline-primary btn-sm align-self-start" href="/admin/applications/<%= row.id %>">View details</a>
+                            <a class="btn btn-outline-primary btn-sm align-self-start" href="/admin/applications/<%= row.id %>?school=<%= encodeURIComponent(preferredLocation) %>&status=<%= encodeURIComponent(status) %>&sortBy=<%= encodeURIComponent(sortBy) %>">View details</a>
                           </div>
                         </div>
                       <% }) %>
