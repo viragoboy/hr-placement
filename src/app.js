@@ -8,9 +8,63 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
 const CERTIFICATE_LEVELS = ['T4', 'T5', 'T6', 'S4', 'S5', 'S6', 'L4', 'L5', 'L6'];
+const REQUESTER_USER_KEYS = ['userId', 'displayName', 'currentJobName', 'currentSchoolLoc', 'currentSchoolName', 'principal'];
+const JOB_KEYS = ['id', 'jobName'];
+const APPLICATION_KEYS = [
+  'id',
+  'requesterId',
+  'formStatus',
+  'curPositionType',
+  'reasonForRequest',
+  'verifyPDP',
+  'verifyCertificate',
+  'yearsOfTeaching',
+  'yearsOfAdmin',
+  'yearsOfCertificated',
+  'yearsTotalGCPS',
+  'yearsTotalExpNonGCPS',
+  'verifyInvoluntarilyToCurLoc',
+  'verifyToHeadCoach',
+  'verifyToSpecialEd',
+  'prefTeachingAssignment1',
+  'additionalInfo1',
+  'prefTeachingAssignment2',
+  'additionalInfo2',
+  'prefTeachingAssignment3',
+  'additionalInfo3',
+  'speaksFrench',
+  'speaksKorean',
+  'speaksSpanish',
+  'speaksOther',
+  'otherLang',
+  'extraCurriculum',
+  'certificationID',
+  'fieldCertification',
+  'certificateLevel',
+  'areaOfConcentration',
+  'otherReason',
+  'dateSubmitted'
+];
 
 function parseBool(value) {
   return value === 'on' || value === 'true' || value === true;
+}
+
+function normalizeRowKeys(row, expectedKeys) {
+  if (!row) return row;
+  const lowerCaseLookup = Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [key.toLowerCase(), value])
+  );
+
+  const normalized = { ...row };
+  expectedKeys.forEach((key) => {
+    const lowerCaseKey = key.toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(lowerCaseLookup, lowerCaseKey)) {
+      normalized[key] = lowerCaseLookup[lowerCaseKey];
+    }
+  });
+
+  return normalized;
 }
 
 function auth(req, res, next) {
@@ -45,20 +99,24 @@ async function getRequesterContext(userId) {
     WHERE a.requesterId = @userId
   `, { userId });
 
+  const user = normalizeRowKeys(userResult.recordset[0], REQUESTER_USER_KEYS);
+  const jobs = jobsResult.recordset.map((job) => normalizeRowKeys(job, JOB_KEYS));
+  const application = normalizeRowKeys(applicationResult.recordset[0], APPLICATION_KEYS);
+
   let selectedLocations = [];
-  if (applicationResult.recordset[0]) {
+  if (application) {
     const pref = await query(
       'SELECT schoolLoc FROM ApplicationPreferredLocations WHERE applicationId = @applicationId',
-      { applicationId: applicationResult.recordset[0].id }
+      { applicationId: application.id }
     );
     selectedLocations = pref.recordset.map((r) => r.schoolLoc);
   }
 
   return {
-    user: userResult.recordset[0],
+    user,
     schools: schoolsResult.recordset,
-    jobs: jobsResult.recordset,
-    application: applicationResult.recordset[0],
+    jobs,
+    application,
     selectedLocations
   };
 }
