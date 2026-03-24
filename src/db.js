@@ -73,7 +73,8 @@ function normalizeStatement(statement, bind = {}) {
 async function query(statement, bind = {}) {
   const client = getPool();
   const normalized = normalizeStatement(statement, bind);
-  const result = await client.query(normalized.text, normalized.values);
+  const values = Array.isArray(normalized.values) ? normalized.values : [];
+  const result = await client.query({ text: normalized.text, values });
   return { ...result, recordset: result.rows };
 }
 
