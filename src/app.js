@@ -19,7 +19,7 @@ const ADMIN_APPLICATION_KEYS = [
   'displayName',
   'currentSchoolName',
   'principal',
-  'preferredLocations'
+  'preferredLocationName'
 ];
 const APPLICATION_KEYS = [
   'id',
@@ -331,22 +331,26 @@ app.get('/admin/applications', async (req, res, next) => {
     const result = await query(`
       SELECT a.id, a.formStatus, a.dateSubmitted, a.certificationID, a.curPositionType,
              u.displayName, s.locname AS currentSchoolName, s.principal,
-             STRING_AGG(ps.locname, ', ') AS preferredLocations
+             ps.locname AS preferredLocationName
       FROM Applications a
       INNER JOIN Users u ON u.userId = a.requesterId
       LEFT JOIN Schools s ON s.loc = u.currentSchoolLoc
       LEFT JOIN ApplicationPreferredLocations apl ON apl.applicationId = a.id
       LEFT JOIN Schools ps ON ps.loc = apl.schoolLoc
-      GROUP BY a.id, a.formStatus, a.dateSubmitted, a.certificationID, a.curPositionType, u.displayName, s.locname, s.principal
-      ORDER BY ${sortBy}
+      ORDER BY ps.locname, a.formStatus, ${sortBy}
     `);
 
     const rows = result.recordset.map((row) => normalizeRowKeys(row, ADMIN_APPLICATION_KEYS));
 
     const grouped = rows.reduce((acc, item) => {
-      const key = item.currentSchoolName || 'Unknown School';
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(item);
+      const school = item.currentSchoolName || 'Unknown School';
+      const preferredLocation = item.preferredLocationName || 'No Preferred Location';
+      const status = item.formStatus || 'Unknown Status';
+
+      if (!acc[school]) acc[school] = {};
+      if (!acc[school][preferredLocation]) acc[school][preferredLocation] = {};
+      if (!acc[school][preferredLocation][status]) acc[school][preferredLocation][status] = [];
+      acc[school][preferredLocation][status].push(item);
       return acc;
     }, {});
 
