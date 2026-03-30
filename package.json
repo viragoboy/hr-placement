@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "check": "node --check src/server.js && node --check src/app.js && node --check src/db.js"
+    "check": "node --check src/server.js && node --check src/app.js && node --check src/db.js && node --check src/constants.js && node --check src/middleware/auth.js && node --check src/services/requester-service.js && node --check src/services/application-service.js && node --check src/routes/requester-routes.js && node --check src/routes/admin-routes.js && node --check src/utils/normalization.js && node --check src/utils/application.js && node --check src/utils/grouping.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
