@@ -31,6 +31,7 @@ router.get('/request', async (req, res, next) => {
       certificateLevels: CERTIFICATE_LEVELS,
       bannerMessage: process.env.BANNER_MESSAGE || '',
       errors: [],
+      isAdminView: false,
       isReadOnly: Boolean(context.application) || !context.user
     });
   } catch (err) {
@@ -124,6 +125,7 @@ router.post('/request', async (req, res, next) => {
         certificateLevels: CERTIFICATE_LEVELS,
         errors: ['Your user profile was not found. Please contact an administrator before submitting a request.'],
         bannerMessage: process.env.BANNER_MESSAGE || '',
+        isAdminView: false,
         isReadOnly: true
       });
     }
@@ -141,6 +143,7 @@ router.post('/request', async (req, res, next) => {
         certificateLevels: CERTIFICATE_LEVELS,
         errors,
         bannerMessage: process.env.BANNER_MESSAGE || '',
+        isAdminView: false,
         isReadOnly,
         application: { ...(context.application || {}), ...req.body },
         selectedLocations: preferredLocations
