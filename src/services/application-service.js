@@ -67,6 +67,9 @@ async function getExistingPreferredLocations(applicationId) {
 }
 
 async function insertApplication(requesterId, applicationValues) {
+  if (applicationValues.curPositionType === 'y')
+    applicationValues.curPositionType = 'N'
+  
   const inserted = await query(`
     INSERT INTO Applications (
       requesterId, curPositionType, reasonForRequest, verifyPDP, verifyCertificate,
