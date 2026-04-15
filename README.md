@@ -29,6 +29,11 @@ Node + Express + PostgreSQL web app for GCPS lateral transfer requests.
    npm start
    ```
 
+## E2E test commands
+
+- `npm run test:e2e` runs tests once in CLI mode and exits.
+- `npm run test:e2e:ui` opens the Playwright UI (interactive mode). This process stays running until you stop it manually.
+
 ## Auth model
 
 This sample expects upstream authentication. For local development you can simulate identity with headers:

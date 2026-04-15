@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { defineConfig } = require('@playwright/test');
 
 const port = Number(process.env.PORT || 3000);
